@@ -6,7 +6,7 @@ from torch.utils.data import DataLoader
 from tqdm import tqdm  # Import tqdm for progress bar
 
 # downloaded path to the pre-trained ResNet-50 weights (download using *wget -c --no-check-certificate https://download.pytorch.org/models/resnet152-b121ed2d.pth*)
-weights_path = 'resnet50-19c8e357.pth'
+weights_path = '/Users/mixturesolution/Desktop/Data-Science-Labs/PDS Final Project/resnet50-19c8e357.pth'
 
 # load pre-trained ResNet-50 model without loading pre-trained weights
 model = torchvision.models.resnet50(pretrained=False)
@@ -26,7 +26,7 @@ data_transforms = transforms.Compose([
 ])
 
 # load bird image dataset
-dataset = ImageFolder(root='/Users/mixturesolution/Desktop/PDS Final Project/train', transform=data_transforms)  # Update with your dataset path
+dataset = ImageFolder(root='/Users/mixturesolution/Desktop/Data-Science-Labs/PDS Final Project/train', transform=data_transforms)  # Update with your dataset path
 dataloader = DataLoader(dataset, batch_size=32, shuffle=False)
 
 # extract features from images
@@ -38,8 +38,14 @@ with torch.no_grad():
         outputs = model(images)
         features.append(outputs.squeeze())
 
-# Stack features along a new dimension
-features = torch.stack(features)
+# Assuming features is a list of tensors
+max_batch_size = max([tensor.size(0) for tensor in features])
+
+# Pad tensors to have consistent batch size
+padded_features = [torch.nn.functional.pad(tensor, (0, 0, 0, max_batch_size - tensor.size(0))) for tensor in features]
+
+# Stack padded tensors
+stacked_features = torch.stack(padded_features)
 
 # Save extracted features to disk
 torch.save(features, 'Features_Extracted.pt')
