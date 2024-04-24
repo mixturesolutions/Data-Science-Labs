@@ -7,6 +7,7 @@ from sklearn.metrics import adjusted_rand_score
 from matplotlib import pyplot as plt
 from scipy.cluster.hierarchy import dendrogram, linkage, fcluster
 from torchvision.datasets import ImageFolder
+from sklearn.metrics import accuracy_score
 
 # Load the extracted test features
 test_features = torch.load('Test_Features_Extracted.pt')
@@ -61,16 +62,28 @@ test_image_paths = [item[0] for item in dataset.samples]
 # Validate and utilize only matched paths
 matched_labels = []
 clusters_matched = []
-for i, path in enumerate(test_image_paths):
+for path in test_image_paths:
     if path in label_mapping:
         matched_labels.append(label_mapping[path])
-        clusters_matched.append(clusters[i])
+        clusters_matched.append(clusters[test_image_paths.index(path)])
     else:
         print(f"Missing path in label_mapping: {path}")
 
 # Recalculate ARI with matched labels and clusters
 ari = adjusted_rand_score(matched_labels, clusters_matched)
 print(f"Adjusted Rand Index with matched data: {ari}")
+
+# Load the ground truth labels for the testing dataset
+ground_truth_labels = []
+for path in test_image_paths:
+    if path in label_mapping:
+        ground_truth_labels.append(label_mapping[path])
+    else:
+        print(f"Label not found for path: {path}")
+
+# Calculate accuracy
+accuracy = accuracy_score(ground_truth_labels, clusters_matched)
+print(f"Accuracy on the testing set: {accuracy}")
 
 # Visualize clusters
 plt.figure(figsize=(10, 8))

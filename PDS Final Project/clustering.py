@@ -1,34 +1,45 @@
 import torch
 import numpy as np
-from scipy.cluster.hierarchy import linkage, fcluster
-from matplotlib import pyplot as plt
-from scipy.cluster.hierarchy import dendrogram
+import pandas as pd
+from sklearn.cluster import KMeans
+from sklearn.metrics import accuracy_score
 
-# Load reduced-dimensional features from Features_Reduced.pt
-features_reduced = torch.load('Features_Reduced.pt')
+# Load reduced-dimensional features of the training set
+training_features_reduced = torch.load('Features_Reduced.pt')
 
-# Perform hierarchical clustering using the Ward method
-linked = linkage(features_reduced, method='ward')
+# Optionally, select a subset of the training features to speed up training
+subset_size = int(len(training_features_reduced))
+subset_indices = np.random.choice(len(training_features_reduced), size=subset_size, replace=False)
+training_features_subset = training_features_reduced[subset_indices]
 
-# Number of clusters
-n_clusters = 5  # Adjust the number of clusters as needed
+# Extract ground truth labels from the training data
+csv_path = '/Users/mixturesolution/Desktop/Data-Science-Labs/PDS Final Project/birds.csv'
+df = pd.read_csv(csv_path, header=None)
+train_data = df[df[3] == 'train']
+ground_truth_labels = train_data[4].tolist()
 
-# Form flat clusters from the hierarchical clustering tree
-cluster_labels = fcluster(linked, n_clusters, criterion='maxclust')
+# Get the number of unique species labels
+species_labels = train_data[4].unique()
+n_species = len(species_labels)
 
-# Optionally visualize the dendrogram
-plt.figure(figsize=(10, 7))
-dendrogram(linked)
-plt.title("Hierarchical Clustering Dendrogram")
-plt.show()
+# Instantiate KMeans with the number of unique species labels as the number of clusters
+kmeans = KMeans(n_clusters=n_species)
 
-# Define the filename for the exported cluster labels
-output_file = 'Cluster_Labels.txt'
+# Fit KMeans to the training features
+kmeans.fit(training_features_subset)
 
-# Export cluster labels to a text file
-np.savetxt(output_file, cluster_labels, fmt='%d')
+# Get cluster labels for each sample
+cluster_labels = kmeans.labels_
 
-print(f"Cluster labels exported to {output_file}")
+# Define the filename for the trained model
+model_filename = 'KMeans_model.pth'
 
-# Saving the linkage matrix for later use
-torch.save(linked, 'Hierarchical_model.pth')
+# Save the trained model
+torch.save(kmeans, model_filename)
+
+# Map cluster labels to species labels
+predicted_species_labels = [species_labels[label] for label in cluster_labels]
+
+# Calculate accuracy
+accuracy = accuracy_score(ground_truth_labels, predicted_species_labels)
+print(f"Accuracy on the training set: {accuracy}")
